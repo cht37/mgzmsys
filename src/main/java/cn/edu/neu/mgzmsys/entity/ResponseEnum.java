@@ -11,6 +11,8 @@ public enum ResponseEnum {
     GET_SUCCESS(200, "Success."),
     GET_FAIL(404, "Not found."),
     ERROR(500, "Server error."),
+    LOGOUT_SUCCESS(200, "Logged out."),
+    LOGOUT_FAIL(400, "Logout failed.")
     ;
     private Integer code;
     private String msg;
