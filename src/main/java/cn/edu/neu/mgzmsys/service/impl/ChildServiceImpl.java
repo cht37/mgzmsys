@@ -1,5 +1,7 @@
 package cn.edu.neu.mgzmsys.service.impl;
 
+import cn.edu.neu.mgzmsys.common.utils.RedisUtil;
+import cn.edu.neu.mgzmsys.dao.ChildDAO;
 import cn.edu.neu.mgzmsys.entity.Child;
 import cn.edu.neu.mgzmsys.mapper.ChildMapper;
 import cn.edu.neu.mgzmsys.service.IChildService;
@@ -22,7 +24,9 @@ import javax.annotation.Resource;
 public class ChildServiceImpl extends ServiceImpl<ChildMapper, Child> implements IChildService {
 
     @Resource
-    ChildMapper childMapper;
+    ChildDAO childDAO;
+    @Resource
+    RedisUtil redisUtil;
 
  /**
      * 查询儿童信息
@@ -30,10 +34,17 @@ public class ChildServiceImpl extends ServiceImpl<ChildMapper, Child> implements
      */
     @Override
     public Child selectChildInfo(String id) {
-    QueryWrapper<Child> queryWrapper = new QueryWrapper<>();
-    queryWrapper.select("user_id", "child_name", "gender", "birthday", "address", "phone", "hobby", "description");
-    return  childMapper.selectOne(queryWrapper.eq("user_id", id));
 
+        // 从redis中获取儿童信息
+        Child child = (Child) redisUtil.get("child:" + id);
+        if ( child != null ) {
+            return child;
+        }
+        // 从数据库中获取儿童信息
+        child = childDAO.getChildById(id);
+        // 将儿童信息存入redis
+        redisUtil.set("child:" + id, child);
+        return child;
     }
     /**
      * 更新儿童信息
@@ -41,10 +52,10 @@ public class ChildServiceImpl extends ServiceImpl<ChildMapper, Child> implements
      */
     @Override
     public boolean updateChildInfo(Child child) {
-        QueryWrapper<Child> wrapper = new QueryWrapper<>();
-        //生成update child_name,gender,birthday,address,phone,hobby,description from child where user_id = #{userId}的wrapper
-        wrapper.eq("user_id", child.getUserId());
-
-        return childMapper.update(child, wrapper) == 1;
+           // 更新数据库中的儿童信息
+            boolean result = childDAO.updateChildInfo(child);
+            // 更新redis中的儿童信息
+            redisUtil.set("child:" + child.getUserId(), child);
+            return result;
     }
 }

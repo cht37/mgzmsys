@@ -33,23 +33,24 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, Users> implements I
     ChildMapper childMapper;
     @Resource
     VolunteerMapper volunteerMapper;
- /**
-     * 登录验证业务
-     * @return 是否成功
-     */
-    @Override
-    public String login(String username, String password) {
-
-        // 通过用户名查询用户
-        LambdaQueryWrapper<Users> lambdaQueryWrapper = new LambdaQueryWrapper<>();
-        lambdaQueryWrapper.eq(username != null, Users::getUserName, username);
-        Users users = userMapper.selectOne(lambdaQueryWrapper);
-        if (users != null && users.getPassword().equals(password)){
-            return users.getUserId();
-        }
-        // 判断用户是否存在，存在则判断密码是否正确
-        return null;
-    }
+    //已经弃用
+// /**
+//     * 登录验证业务
+//     * @return 是否成功
+//     */
+//    @Override
+//    public String login(String username, String password) {
+//
+//        // 通过用户名查询用户
+//        LambdaQueryWrapper<Users> lambdaQueryWrapper = new LambdaQueryWrapper<>();
+//        lambdaQueryWrapper.eq(username != null, Users::getUserName, username);
+//        Users users = userMapper.selectOne(lambdaQueryWrapper);
+//        if (users != null && users.getPassword().equals(password)){
+//            return users.getUserId();
+//        }
+//        // 判断用户是否存在，存在则判断密码是否正确
+//        return null;
+//    }
     /**
      * 注册业务
      * @return 是否成功
