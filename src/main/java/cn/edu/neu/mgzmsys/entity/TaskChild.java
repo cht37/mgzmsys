@@ -2,10 +2,11 @@ package cn.edu.neu.mgzmsys.entity;
 
 import lombok.Data;
 
+import java.io.Serializable;
 import java.time.LocalDate;
 
 @Data
-public class TaskChild {
+public class TaskChild implements Serializable {
     private String taskId;
   private String childId;
   private String volunteerId;

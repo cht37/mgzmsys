@@ -2,25 +2,31 @@ package cn.edu.neu.mgzmsys.controller;
 
 
 import cn.edu.neu.mgzmsys.common.utils.JwtUtil;
+import cn.edu.neu.mgzmsys.common.utils.RedisUtil;
 import cn.edu.neu.mgzmsys.entity.Child;
 import cn.edu.neu.mgzmsys.entity.HttpResponseEntity;
+import cn.edu.neu.mgzmsys.entity.MyUserDetails;
 import cn.edu.neu.mgzmsys.entity.Volunteer;
 import cn.edu.neu.mgzmsys.service.IChildService;
 import cn.edu.neu.mgzmsys.service.IUserService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.text.ParseException;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * <p>
- *  前端控制器
+ * 前端控制器
  * </p>
  *
  * @author team15
@@ -29,6 +35,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/user")
 public class UserController {
+    @Resource
+    private RedisUtil redisUtil;
     @Resource
     private IUserService userService;
     @Resource
@@ -113,6 +121,27 @@ public class UserController {
             // 查询用户信息逻辑...
             Map<String, Object> userInfo = userService.selectUser(name);
             return new HttpResponseEntity().get(userInfo).toResponseEntity();
+        } catch (Exception e) {
+            // 异常处理...
+            return HttpResponseEntity.ERROR.toResponseEntity();
+        }
+    }
+
+    @PostMapping(value = "/logout", headers = "Accept=application/json")
+    public ResponseEntity<HttpResponseEntity> logout(HttpServletRequest request) {
+        try {
+            // 查询用户信息逻辑...
+            String token = request.getHeader("token");
+            String userId = JwtUtil.getUidFromToken(token);
+
+            String key = "login:" + userId;
+            redisUtil.del(key);
+            MyUserDetails loginUser = (MyUserDetails) redisUtil.get(key);
+            if (Objects.isNull(loginUser)) {
+                return HttpResponseEntity.LOGOUT_SUCCESS.toResponseEntity();
+            } else {
+                return HttpResponseEntity.LOGOUT_FAIL.toResponseEntity();
+            }
         } catch (Exception e) {
             // 异常处理...
             return HttpResponseEntity.ERROR.toResponseEntity();

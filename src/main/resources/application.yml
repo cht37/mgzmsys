@@ -16,9 +16,9 @@ spring:
     resources:
       static-locations: classpath:static/,file:static/
   rabbitmq:
-    host: 47.115.214.12
-    port: 5672
-    username: nums
+    host: 39.101.65.147
+    port: 5673
+    username: cht
     password: 123456
     virtual-host: /
     listener:
@@ -30,14 +30,18 @@ spring:
     user:
       name: user
       password: pwd123
-
+  redis:
+    host: 39.101.65.147
+    port: 6379
+    timeout: 1800000
+    password: cht021125
 mybatis-plus:
   type-aliases-package: cn.edu.neu.mgzmsys.entity
   configuration:
     call-setters-on-nulls: false
     map-underscore-to-camel-case: true
     auto-mapping-behavior: full
-#    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  #    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
   mapper-locations: classpath:mapper/**/**Mapper.xml
   global-config:
     banner: true
@@ -49,5 +53,4 @@ mybatis-plus:
 logging:
   level:
     root: info
-
 

@@ -1,5 +1,8 @@
 package cn.edu.neu.mgzmsys.service.impl;
 
+import cn.edu.neu.mgzmsys.common.utils.RedisUtil;
+import cn.edu.neu.mgzmsys.dao.ChildTaskDAO;
+import cn.edu.neu.mgzmsys.dao.TaskDAO;
 import cn.edu.neu.mgzmsys.entity.Task;
 import cn.edu.neu.mgzmsys.entity.TaskChild;
 import cn.edu.neu.mgzmsys.mapper.TaskChildMapper;
@@ -10,6 +13,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -27,7 +31,11 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements IT
     @Resource
     TaskMapper taskMapper;
     @Resource
-    TaskChildMapper taskChildMapper;
+    TaskDAO taskDAO;
+    @Resource
+    RedisUtil redisUtil;
+    @Resource
+    ChildTaskDAO childTaskDAO;
 
     /**
      * 根据儿童id获取任务
@@ -35,10 +43,16 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements IT
      */
     @Override
     public List<Task> getTaskById(String id){
-        LambdaQueryWrapper<Task> lambdaQueryWrapper = new LambdaQueryWrapper<>();
-        String sql = "select task_id from child_task where child_id = \"" + id+"\"";
-        lambdaQueryWrapper.inSql(Task::getTaskId, sql);
-        return taskMapper.selectList(lambdaQueryWrapper);
+      //从redis中获取任务
+        List<Task> tasks = (List<Task>) redisUtil.get("task:" + id);
+        if (tasks != null) {
+            return tasks;
+        }
+        //从数据库中获取任务
+        tasks = taskDAO.getTaskById(id);
+        //将任务存入redis
+        redisUtil.set("task:" + id, tasks);
+        return tasks;
     }
     /**
      * 更新任务
@@ -46,13 +60,36 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements IT
      */
     @Override
     public boolean updateTask(Map<String, Object> map){
-        return taskChildMapper.updateChildTask(map);
+        // 更新数据库中的任务
+        boolean result = childTaskDAO.updateChildTask(map);
+        // 更新redis中的任务
+        if (result) {
+            TaskChild taskChild = new TaskChild();
+            taskChild.setChildId((String) map.get("childId"));
+            taskChild.setTaskId((String) map.get("taskId"));
+            taskChild.setVolunteerId((String) map.get("volunteerId"));
+            taskChild.setFinishAt((LocalDate) map.get("finishAt"));
+            taskChild.setAnswer((String) map.get("answer"));
+            taskChild.setResponse((String) map.get("response"));
+            taskChild.setResponseAt((LocalDate) map.get("responseAt"));
+            redisUtil.set("task:" + map.get("childId") + map.get("taskId"), taskChild);
+        }
+        return result;
     }
     /**
      * 查询任务
      */
     @Override
     public TaskChild selectTask(Map<String, Object> map){
-        return taskChildMapper.selectChildTask(map);
+       //从redis中获取任务
+        TaskChild taskChild = (TaskChild) redisUtil.get("task:" + map.get("childId") + map.get("taskId"));
+        if (taskChild != null) {
+            return taskChild;
+        }
+        //从数据库中获取任务
+        taskChild = childTaskDAO.getTaskChildByMap(map);
+        //将任务存入redis
+        redisUtil.set("task:" + map.get("childId") + map.get("taskId"), taskChild);
+        return taskChild;
     }
 }

@@ -1,7 +1,9 @@
 package cn.edu.neu.mgzmsys.service.impl;
 
+import cn.edu.neu.mgzmsys.common.utils.RedisUtil;
 import cn.edu.neu.mgzmsys.component.MQConsumer;
 import cn.edu.neu.mgzmsys.component.MQProducer;
+import cn.edu.neu.mgzmsys.dao.MessageDAO;
 import cn.edu.neu.mgzmsys.entity.Message;
 import cn.edu.neu.mgzmsys.mapper.MessageMapper;
 import cn.edu.neu.mgzmsys.service.IMessageService;
@@ -24,8 +26,9 @@ import java.util.Queue;
 @Service
 public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> implements IMessageService {
     @Resource
-    MessageMapper messageMapper;
-
+    MessageDAO messageDAO;
+    @Resource
+    RedisUtil redisUtil;
     @Resource
     MQProducer mqProducer;
 
@@ -38,11 +41,17 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
      * @return 消息列表
      */
     @Override
-    public List<Message> selectMessage(String connectionId,String senderId) {
-        LambdaQueryWrapper<Message> lambdaQueryWrapper = new LambdaQueryWrapper<>();
-        //按照message_time时间排序
-        lambdaQueryWrapper.and(i->i.and(e->e.eq(Message::getMessageStatus,2)).or(e->e.eq(Message::getPosterId,senderId).eq(Message::getMessageStatus,1))).orderByAsc(Message::getMessageTime).eq(Message::getConversationId,connectionId);
-        return messageMapper.selectList(lambdaQueryWrapper);
+    public List<Message> selectMessage(String connectionId, String senderId) {
+        //从redis中获取消息
+        List<Message> messages = (List<Message>) redisUtil.get("message:" + connectionId + senderId);
+        if (messages != null) {
+            return messages;
+        }
+        //从数据库中获取消息
+        messages = messageDAO.searchMessage(connectionId, senderId);
+        //将消息存入redis
+        redisUtil.set("message:" + connectionId + senderId, messages);
+        return messages;
     }
 
     /**
@@ -66,6 +75,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
      */
     @Override
     public boolean saveMessage(Message message) {
-        return messageMapper.insert(message) > 0;
+
+        return messageDAO.insertMessage(message);
     }
 }
